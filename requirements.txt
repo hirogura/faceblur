@@ -1,0 +1,5 @@
+# faceblur が使う依存関係.
+#
+# 顔検出には OpenCV (DNN / YuNet) を使う. ブラウザ側の描画は標準の Canvas API だけ.
+opencv-python-headless>=5.0.0
+numpy>=2.3

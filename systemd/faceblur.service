@@ -1,0 +1,19 @@
+[Unit]
+Description=faceblur v.0.1.0 (顔を自動検出してぼかす自ホスト サービス)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/faceblur
+ExecStart=/opt/faceblur/.venv/bin/python -m faceblur
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=FACEBLUR_HOST=127.0.0.1
+Environment=FACEBLUR_PORT=3370
+# 破壊的な操作 (再起動 / アップデート) を制限する場合は
+# Environment=FACEBLUR_ADMIN_TOKEN=... を追加する.
+
+[Install]
+WantedBy=multi-user.target
