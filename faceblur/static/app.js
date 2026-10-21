@@ -342,11 +342,12 @@
 
   function undo(img) {
     if (!img || !img.undo.length) {
-      toast('取り消せる筆画がありません', 'err');
+      toast('戻せる筆画がありません', 'err');
       return;
     }
     img.strokes = JSON.parse(img.undo.pop());
     render();
+    toast('1 つ前の筆画に戻しました', 'ok');
   }
 
   function eraseAt(img, point, radius) {
@@ -436,6 +437,7 @@
       stroke.points.push(point);
     }
     render();
+    drawCursor();  // ドラッグ中も円をカーソルに追従させる
   }
 
   function onPointerUp(event) {
@@ -445,6 +447,7 @@
   }
 
   function onPointerLeave() {
+    if (state.drawing) return;  // ドラッグ中は消さない
     state.cursor = null;
     drawCursor();
   }

@@ -1,5 +1,5 @@
 [Unit]
-Description=faceblur v.0.2.0 (顔を自動検出してぼかす自ホスト サービス)
+Description=faceblur v.0.3.0 (顔を自動検出してぼかす自ホスト サービス)
 After=network-online.target
 Wants=network-online.target
 
