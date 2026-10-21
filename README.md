@@ -24,6 +24,8 @@
 ## インストール
 
 ```shell
+git clone https://github.com/hirogura/faceblur.git /opt/faceblur
+cd /opt/faceblur
 sudo ./scripts/install.sh
 ```
 
