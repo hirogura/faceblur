@@ -72,7 +72,7 @@ def test_index_has_version(server):
     status, body = get(f"{server}/")
     assert status == 200
     assert VERSION_LABEL in body
-    assert "v.0.1.0" in body
+    assert "v.0.2.0" in body
 
 
 def test_index_has_update_and_restart_buttons(server):
@@ -144,5 +144,33 @@ def test_update_and_restart_need_the_token(guarded_server):
     assert "トークン" in json.loads(body)["error"]
 
     status, body = post(f"{guarded_server}/api/update", b"{}", allow_error=True)
+    assert status == 403
+    assert "トークン" in json.loads(body)["error"]
+
+
+def test_detect_caches_the_image_and_clear_removes_it(server, app):
+    import cv2
+    import numpy as np
+
+    img = np.full((32, 48, 3), 255, dtype=np.uint8)
+    ok, buf = cv2.imencode(".png", img)
+    assert ok
+
+    status, body = post(
+        f"{server}/api/detect", buf.tobytes(), {"Content-Type": "image/png"}
+    )
+    assert status == 200
+    assert app.cache.count() >= 1
+
+    status, body = post(f"{server}/api/cache/clear", b"{}")
+    assert status == 200
+    data = json.loads(body)
+    assert data["ok"] is True
+    assert data["removed"] >= 1
+    assert app.cache.count() == 0
+
+
+def test_cache_clear_needs_the_token(guarded_server):
+    status, body = post(f"{guarded_server}/api/cache/clear", b"{}", allow_error=True)
     assert status == 403
     assert "トークン" in json.loads(body)["error"]

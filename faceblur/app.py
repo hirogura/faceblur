@@ -8,6 +8,7 @@
     GET  /api/health         ヘルスチェック
     GET  /api/update/status  アップデートの進行状況
     POST /api/detect         画像から顔を検出
+    POST /api/cache/clear    サーバーに残ったキャッシュ画像を削除
     POST /api/restart        サービス再起動
     POST /api/update         GitHub からのアップデート
 """
@@ -26,6 +27,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from . import APP_NAME, VERSION_LABEL, __version__
+from .cache import ImageCache
 from .config import SETTINGS, Settings
 from .detector import MODEL_NAME, FaceDetector, ModelMissingError
 from .service import REPO_URL, ServiceManager, make_restart_hook
@@ -56,6 +58,11 @@ class App:
         self.service = ServiceManager(
             settings.repo_root, restart_hook=make_restart_hook(args)
         )
+        self.cache = ImageCache(
+            settings.cache_dir,
+            keep=settings.cache_keep,
+            max_age=settings.cache_max_age,
+        )
         self.started_at = time.time()
         if warm_up:
             threading.Thread(
@@ -83,6 +90,7 @@ class App:
                 "ready": self.detector.model_exists(),
                 "path": str(self.detector.model_path),
             },
+            "cache": {"count": self.cache.count(), "dir": str(self.cache.directory)},
             "update": update,
         }
 
@@ -184,7 +192,21 @@ def make_handler(app: App):
                     if not data:
                         self._error(400, "画像がありません")
                         return
+                    app.cache.put(data)  # サーバーに残す (「全てクリア」で消せる)
                     self._json(200, app.detector.detect(data))
+                elif path == "/api/cache/clear":
+                    if not self._authorized():
+                        self._error(403, "不正なトークンです")
+                        return
+                    removed = app.cache.clear()
+                    self._json(
+                        200,
+                        {
+                            "ok": True,
+                            "removed": removed,
+                            "count": app.cache.count(),
+                        },
+                    )
                 elif path == "/api/restart":
                     if not self._authorized():
                         self._error(403, "不正なトークンです")

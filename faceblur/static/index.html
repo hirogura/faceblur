@@ -28,7 +28,11 @@
 <main class="layout">
   <section class="panel side">
     <div class="block">
-      <h2 class="block-title">写真</h2>
+      <div class="block-head">
+        <h2 class="block-title">写真</h2>
+        <button type="button" class="btn btn-sm" id="btn-clear-cache"
+                title="サーバーに残ったキャッシュ画像を削除します">全てクリア</button>
+      </div>
       <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="写真を追加">
         <p class="dz-main">写真をドラッグ＆ドロップ</p>
         <p class="dz-sub">またはここをクリックして選択</p>
@@ -61,7 +65,7 @@
       <input type="range" id="brush-slider" min="4" max="240" step="1" value="40">
       <p class="hint" id="mode-hint">ドラッグすると選んだ場所を手動でぼかします</p>
       <div class="row">
-        <button type="button" class="btn btn-sm" id="btn-undo">笔画を取り消す</button>
+        <button type="button" class="btn btn-sm" id="btn-undo">筆画を取り消す</button>
         <button type="button" class="btn btn-sm" id="btn-clear-strokes">筆を消す</button>
       </div>
     </div>
@@ -92,6 +96,7 @@
       <div class="canvas-wrap" id="canvas-wrap">
         <canvas id="canvas"></canvas>
         <canvas id="overlay"></canvas>
+        <canvas id="cursor"></canvas>
       </div>
       <p class="empty" id="empty-hint">写真をドロップするとここに表示されます</p>
     </div>

@@ -9,7 +9,7 @@
   const MAX_PREVIEW_W = 1280;   // 画面上の表示幅の上限
   const MAX_PREVIEW_H = 900;    // 画面上の表示高さの上限
   const DETECT_MAX_SIDE = 1600; // 顔検出に送る画像の長辺の上限
-  const UNDO_LIMIT = 40;        // 笔画の undone 保持数
+  const UNDO_LIMIT = 40;        // 筆画の履歴保持数
 
   const state = {
     images: [],      // {id, name, bitmap, width, height, faces, strokes, undo}
@@ -20,6 +20,7 @@
     hide: false,     // 元画像と比較する
     drawing: false,
     pointerId: null,
+    cursor: null,    // マウスの位置 (元の画像ピクセル)
     seq: 0,
   };
 
@@ -102,11 +103,15 @@
     if (!img) return;
     const canvas = $('canvas');
     const overlay = $('overlay');
+    const cursor = $('cursor');
     const scale = previewScale(img);
     canvas.width = Math.max(1, Math.round(img.width * scale));
     canvas.height = Math.max(1, Math.round(img.height * scale));
     overlay.width = canvas.width;
     overlay.height = canvas.height;
+    cursor.width = canvas.width;
+    cursor.height = canvas.height;
+    state.cursor = null;
     $('empty-hint').classList.add('is-hidden');
     render();
     renderFaces();
@@ -240,11 +245,14 @@
     const img = current();
     const canvas = $('canvas');
     const overlay = $('overlay');
+    const cursor = $('cursor');
     if (!img) {
       canvas.width = 0;
       canvas.height = 0;
       overlay.width = 0;
       overlay.height = 0;
+      cursor.width = 0;
+      cursor.height = 0;
       return;
     }
     const w = canvas.width;
@@ -291,6 +299,30 @@
     ctx.setLineDash([]);
   }
 
+  // ---------- 筆のカーソル ----------
+  function drawCursor() {
+    const canvas = $('cursor');
+    const img = current();
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!img || !state.cursor || state.mode === 'select') return;
+
+    const scale = canvas.width / img.width;
+    const x = state.cursor.x * scale;
+    const y = state.cursor.y * scale;
+    const r = Math.max(2, (state.brush / 2) * scale);  // 筆の太さと同じ大きさ
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.stroke();
+  }
+
   // ---------- 筆ツール ----------
   function toImageCoords(event) {
     const canvas = $('canvas');
@@ -310,7 +342,7 @@
 
   function undo(img) {
     if (!img || !img.undo.length) {
-      toast('取り消せる笔画がありません', 'err');
+      toast('取り消せる筆画がありません', 'err');
       return;
     }
     img.strokes = JSON.parse(img.undo.pop());
@@ -360,6 +392,8 @@
     const img = current();
     if (!img) return;
     const point = toImageCoords(event);
+    state.cursor = point;
+    drawCursor();
     if (state.mode === 'select') {
       const face = faceAt(img, point);
       if (face) {
@@ -384,10 +418,14 @@
   }
 
   function onPointerMove(event) {
-    if (!state.drawing || event.pointerId !== state.pointerId) return;
     const img = current();
     if (!img) return;
     const point = toImageCoords(event);
+    state.cursor = point;
+    if (!state.drawing || event.pointerId !== state.pointerId) {
+      drawCursor();
+      return;
+    }
     if (state.mode === 'erase') {
       eraseAt(img, point, state.brush / 2);
     } else {
@@ -404,6 +442,11 @@
     if (event.pointerId !== state.pointerId) return;
     state.drawing = false;
     state.pointerId = null;
+  }
+
+  function onPointerLeave() {
+    state.cursor = null;
+    drawCursor();
   }
 
   // ---------- 検出した顔の一覧 ----------
@@ -640,10 +683,12 @@
   });
 
   const canvas = $('canvas');
+  canvas.classList.add('is-brush');
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', onPointerUp);
+  canvas.addEventListener('pointerleave', onPointerLeave);
 
   const modes = {
     'mode-brush': {
@@ -665,6 +710,9 @@
       $(id).classList.add('is-active');
       state.mode = modes[id].mode;
       $('mode-hint').textContent = modes[id].hint;
+      // 選択モードでは筆のカーソルは出さない
+      canvas.classList.toggle('is-brush', state.mode !== 'select');
+      drawCursor();
     });
   });
 
@@ -679,6 +727,7 @@
   brushSlider.addEventListener('input', () => {
     state.brush = Number(brushSlider.value);
     $('brush-value').textContent = `${state.brush}px`;
+    drawCursor();
   });
 
   $('chk-hide').addEventListener('change', (event) => {
@@ -711,6 +760,23 @@
     pushUndo(img);
     img.strokes = [];
     render();
+  });
+
+  $('btn-clear-cache').addEventListener('click', async () => {
+    const btn = $('btn-clear-cache');
+    btn.classList.add('is-busy');
+    try {
+      const data = await api('/api/cache/clear', { method: 'POST' });
+      const removed = data.removed || 0;
+      toast(
+        removed ? `サーバーのキャッシュ画像を ${removed} 件削除しました` : 'キャッシュ画像はありません',
+        'ok'
+      );
+    } catch (err) {
+      toast(`キャッシュの削除に失敗しました: ${err.message}`, 'err');
+    } finally {
+      btn.classList.remove('is-busy');
+    }
   });
 
   $('btn-save').addEventListener('click', save);

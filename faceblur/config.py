@@ -30,6 +30,8 @@ class Settings:
     max_upload_bytes: int = _env_int("FACEBLUR_MAX_UPLOAD", 40 * 1024 * 1024)
     detect_score: float = _env_float("FACEBLUR_DETECT_SCORE", 0.6)
     detect_max_side: int = _env_int("FACEBLUR_DETECT_MAX_SIDE", 1600)
+    cache_keep: int = _env_int("FACEBLUR_CACHE_KEEP", 30)
+    cache_max_age: int = _env_int("FACEBLUR_CACHE_MAX_AGE", 3600 * 6)
     admin_token: str = os.environ.get("FACEBLUR_ADMIN_TOKEN", "")
     repo_root: Path = REPO_ROOT
     model_dir: Path = field(
@@ -43,6 +45,11 @@ class Settings:
         from .detector import MODEL_NAME
 
         return self.model_dir / MODEL_NAME
+
+    @property
+    def cache_dir(self) -> Path:
+        """受け取った画像を置いておく場所."""
+        return self.repo_root / ".cache" / "images"
 
     @property
     def static_dir(self) -> Path:
