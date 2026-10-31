@@ -7,7 +7,7 @@
     GET  /api/info           バージョンなどの情報
     GET  /api/health         ヘルスチェック
     GET  /api/update/status  アップデートの進行状況
-    POST /api/detect         画像から顔を検出
+    POST /api/detect         画像から顔を検出 (?score= で閾値を指定できる)
     POST /api/cache/clear    サーバーに残ったキャッシュ画像を削除
     POST /api/restart        サービス再起動
     POST /api/update         GitHub からのアップデート
@@ -185,7 +185,7 @@ def make_handler(app: App):
                 self._error(404, "not found")
 
         def do_POST(self):
-            path = self.path.split("?", 1)[0]
+            path, query = (self.path.split("?", 1) + [""])[:2]
             try:
                 if path == "/api/detect":
                     data = self._body()
@@ -193,7 +193,15 @@ def make_handler(app: App):
                         self._error(400, "画像がありません")
                         return
                     app.cache.put(data)  # サーバーに残す (「全てクリア」で消せる)
-                    self._json(200, app.detector.detect(data))
+                    score = None
+                    for part in query.split("&"):
+                        name, _, value = part.partition("=")
+                        if name == "score" and value:
+                            try:
+                                score = min(0.95, max(0.05, float(value)))
+                            except ValueError:
+                                score = None
+                    self._json(200, app.detector.detect(data, score_threshold=score))
                 elif path == "/api/cache/clear":
                     if not self._authorized():
                         self._error(403, "不正なトークンです")

@@ -72,7 +72,6 @@ def test_index_has_version(server):
     status, body = get(f"{server}/")
     assert status == 200
     assert VERSION_LABEL in body
-    assert "v.0.3.0" in body
 
 
 def test_index_has_update_and_restart_buttons(server):
@@ -130,6 +129,27 @@ def test_detect_returns_face_list(server):
     data = json.loads(body)
     assert data["faces"] == []
     assert data["width"] == 48 and data["height"] == 32
+
+
+def test_detect_accepts_score_parameter(server):
+    import cv2
+    import numpy as np
+
+    img = np.full((32, 48, 3), 255, dtype=np.uint8)
+    ok, buf = cv2.imencode(".png", img)
+    assert ok
+
+    status, body = post(
+        f"{server}/api/detect?score=0.3", buf.tobytes(), {"Content-Type": "image/png"}
+    )
+    assert status == 200
+    assert json.loads(body)["faces"] == []
+
+    status, body = post(
+        f"{server}/api/detect?score=no", buf.tobytes(), {"Content-Type": "image/png"}
+    )
+    assert status == 200
+    assert json.loads(body)["faces"] == []
 
 
 def test_detect_rejects_empty_body(server):

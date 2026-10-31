@@ -18,6 +18,7 @@
     blur: 40,        // ぼかしの強さ (%)
     brush: 40,       // 筆の太さ (元の画像ピクセル)
     hide: false,     // 元画像と比較する
+    score: 0.6,      // 顔検出の閾値 (確からしさの下限)
     drawing: false,
     pointerId: null,
     cursor: null,    // マウスの位置 (元の画像ピクセル)
@@ -134,7 +135,7 @@
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
     if (!blob) throw new Error('画像を変換できませんでした');
 
-    const data = await api('/api/detect', {
+    const data = await api(`/api/detect?score=${state.score}`, {
       method: 'POST',
       body: blob,
       headers: { 'Content-Type': 'image/jpeg' },
@@ -731,6 +732,20 @@
     state.brush = Number(brushSlider.value);
     $('brush-value').textContent = `${state.brush}px`;
     drawCursor();
+  });
+
+  // 閾値を変えたら少しだけ待って自動で再検出する.
+  let scoreTimer = null;
+  function rehandCurrent() {
+    const img = current();
+    if (img) runDetect(img);
+  }
+  const scoreSlider = $('score-slider');
+  scoreSlider.addEventListener('input', () => {
+    state.score = Number(scoreSlider.value);
+    $('score-value').textContent = state.score.toFixed(2);
+    clearTimeout(scoreTimer);
+    scoreTimer = setTimeout(rehandCurrent, 350);
   });
 
   $('chk-hide').addEventListener('change', (event) => {

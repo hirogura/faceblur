@@ -95,9 +95,10 @@ class FaceDetector:
             return detector
 
     # --- 検出 ---------------------------------------------------------------
-    def detect(self, data: bytes) -> dict:
+    def detect(self, data: bytes, score_threshold: float | None = None) -> dict:
         """画像データから顔を探す.
 
+        ``score_threshold`` を指定するとその值で検出する (省略時は設定値).
         戻り値は ``{"width": ..., "height": ..., "faces": [...]}``.
         """
         import cv2
@@ -118,6 +119,9 @@ class FaceDetector:
 
         detector = self._load()
         with self._lock:
+            if score_threshold is not None:
+                detector.setScoreThreshold(score_threshold)
+                self.score_threshold = score_threshold
             if self._input_size != (width, height):
                 detector.setInputSize((width, height))
                 self._input_size = (width, height)

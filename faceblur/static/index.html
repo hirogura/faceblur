@@ -76,6 +76,11 @@
         <button type="button" class="btn btn-sm" id="btn-detect">顔を検出</button>
         <button type="button" class="btn btn-sm" id="btn-clear-faces">検出をすべて解除</button>
       </div>
+      <label class="slider-row" for="score-slider">
+        <span>検出の閾値</span><output id="score-value">0.60</output>
+      </label>
+      <input type="range" id="score-slider" min="0.1" max="0.9" step="0.05" value="0.6"
+             title="低くすると曖昧な顔も検出し, 高くすると確実な顔だけを検出します">
       <ul class="faces" id="faces-list"></ul>
     </div>
 
