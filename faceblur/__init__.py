@@ -1,6 +1,6 @@
 """faceblur: 写真から顔を自動で検出してぼかす小さな Web アプリ."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 APP_NAME = "faceblur"
 VERSION_LABEL = f"v.{__version__}"
